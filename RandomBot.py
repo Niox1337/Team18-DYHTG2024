@@ -8,6 +8,7 @@ import struct
 import argparse
 import random
 
+from MessageFilter import *
 
 class ServerMessageTypes(object):
 	TEST = 0
@@ -181,6 +182,8 @@ GameServer.sendMessage(ServerMessageTypes.CREATETANK, {'Name': args.name})
 i=0
 while True:
 	message = GameServer.readMessage()
+
+	track_enemy(message)
     
 	if i == 5:
 		if random.randint(0, 10) > 5:
