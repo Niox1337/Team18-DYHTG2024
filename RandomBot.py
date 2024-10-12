@@ -7,6 +7,8 @@ import binascii
 import struct
 import argparse
 import random
+import math
+import numpy as np
 
 
 class ServerMessageTypes(object):
@@ -154,6 +156,38 @@ class ServerComms(object):
 			binascii.hexlify(message)))
 		return self.ServerSocket.send(message)
 
+def getHeading(x1, y1, x2, y2):
+	heading = math.atan2(y2 - y1, x2 - x1)
+	heading = heading * (180.0 / math.pi)
+	heading = (heading + 360) % 360
+	heading = 360 - heading
+	return abs(heading)
+
+
+def get_current_state(name):
+    while(True):
+        message = GameServer.readMessage()
+        if message["messageType"] != 18:
+            continue
+        if message["Name"] == name:
+            return message
+
+def goToPoint(x1,y1,x2,y2):
+    heading = getHeading(x1,y1,x2,y2)
+    logging.info(heading)
+    for i in range(20):
+        if i == 5:
+            GameServer.sendMessage(ServerMessageTypes.TURNTOHEADING,{"Amount": heading})
+        if i == 15:
+            GameServer.sendMessage(ServerMessageTypes.MOVEFORWARDDISTANCE, {"Amount": 20})
+
+def attack(x1, y1, x2, y2):
+    heading = getHeading(x1,y1,x2,y2)
+    for i in range(10):
+        if i == 0:
+            GameServer.sendMessage(ServerMessageTypes.TURNTURRETTOHEADING, {"Amount": heading})
+        elif i == 5 or i == 10:
+            GameServer.sendMessage(ServerMessageTypes.FIRE)
 
 # Parse command line args
 parser = argparse.ArgumentParser()
@@ -179,20 +213,32 @@ GameServer.sendMessage(ServerMessageTypes.CREATETANK, {'Name': args.name})
 
 # Main loop - read game messages, ignore them and randomly perform actions
 i=0
+message = GameServer.readMessage()
+GameServer.sendMessage(ServerMessageTypes.TOGGLETURRETRIGHT)
+GameServer.sendMessage(ServerMessageTypes.TOGGLEFORWARD)
+
+currentState = get_current_state(args.name)
+goToPoint(currentState['X'], currentState['Y'], 0, 0)
+
+i = 0
 while True:
-	message = GameServer.readMessage()
+    message = GameServer.readMessage()
+    currentState = get_current_state(args.name)
+    while abs(currentState['X'] >= 50) or abs(currentState['Y']) >= 80:
+        GameServer.sendMessage(ServerMessageTypes.TURNTOHEADING, {"Amount": random.randint(90,270)})
+        GameServer.sendMessage(ServerMessageTypes.MOVEFORWARDDISTANCE, {"Amount", random.randint(20, 100)})
     
-	if i == 5:
-		if random.randint(0, 10) > 5:
-			logging.info("Firing")
-			GameServer.sendMessage(ServerMessageTypes.FIRE)
-	elif i == 10:
-		logging.info("Turning randomly")
-		GameServer.sendMessage(ServerMessageTypes.TURNTOHEADING, {'Amount': random.randint(0, 359)})
-	elif i == 15:
-		logging.info("Moving randomly")
-		GameServer.sendMessage(ServerMessageTypes.MOVEFORWARDDISTANCE, {'Amount': random.randint(0, 10)})
-	i = i + 1
-	if i > 20:
-		i = 0
+    if message["messageType"] == 18:
+        if message['Type'] == 'Tank' and message['Name'] != args.name:
+            GameServer.sendMessage(ServerMessageTypes.STOPALL)
+            attack(currentState['X'], currentState['Y'], message['X'], message['Y'])
+            GameServer.sendMessage(ServerMessageTypes.TOGGLEFORWARD)
+        elif message['Type'] == 'HealthPickup' and currentState['Health'] <= 2:
+            goToPoint(currentState['X'], currentState['Y'], message['X'], message['Y'])
+        elif message['Type'] == 'AmmoPickup' and currentState['Ammo'] <= 5:
+            goToPoint(currentState['X'], currentState['Y'], message['X'], message['Y'])
+    if i == 10:
+        GameServer.sendMessage(ServerMessageTypes.TOGGLEFORWARD)
+    i += 1
+	
 
