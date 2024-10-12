@@ -9,6 +9,12 @@ import argparse
 import random
 
 from MessageFilter import *
+from MathUtils import * 
+
+BLUE_GOAL = (0, 100)
+BLUE_PENALTY = (0, 75)
+RED_GOAL = (0, -100)
+RED_PENALTY = (0, -75) 
 
 class ServerMessageTypes(object):
 	TEST = 0
@@ -188,6 +194,7 @@ my_y = 100
 
 # Main loop - read game messages, ignore them and randomly perform actions
 i=0
+
 while True:
 	message = GameServer.readMessage()
 
@@ -206,6 +213,15 @@ while True:
 				track_enemy(message)
 				#pass
 
+			if their_name == "ManualTank":
+				print("gottem")
+		
+				to_goal = getHeading(my_x, my_y, message["X"], message["Y"])
+				#GameServer.sendMessage(ServerMessageTypes.TURNTOHEADING, {"Amount": to_goal})
+				print(to_goal)
+				GameServer.sendMessage(ServerMessageTypes.TURNTURRETTOHEADING, {"Amount": to_goal})
+		#GameServer.sendMessage(ServerMessageTypes.MOVEFORWARDDISTANCE, {"Amount": 10})
+
 	else:
 			print(message)
 
@@ -221,7 +237,7 @@ while True:
 	elif i == 15:
 		logging.info("Moving randomly")
 		GameServer.sendMessage(ServerMessageTypes.MOVEFORWARDDISTANCE, {'Amount': random.randint(0, 10)})
-	i = i + 1
+	#i = i + 1
 	if i > 20:
 		i = 0
 
