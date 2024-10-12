@@ -15,6 +15,10 @@ BLUE_GOAL = (0, 100)
 BLUE_PENALTY = (0, 75)
 RED_GOAL = (0, -100)
 RED_PENALTY = (0, -75) 
+CENTER = (0, 0)
+
+def in_goal(x, y):
+	return y > 100 or y < -100
 
 class ServerMessageTypes(object):
 	TEST = 0
@@ -198,13 +202,16 @@ i=0
 
 CHASING_SNITCH = False
 HAVE_SNITCH = False
+HAVE_KILL = False
+ROAMING = False 
 
-GameServer.sendMessage(ServerMessageTypes.TOGGLEFORWARD)
+#GameServer.sendMessage(ServerMessageTypes.TOGGLEFORWARD)
 
 while True:
 	message = GameServer.readMessage()
+	messageType = message["messageType"]
 
-	if message["messageType"] == ServerMessageTypes.OBJECTUPDATE:
+	if messageType == ServerMessageTypes.OBJECTUPDATE:
 		if message["Type"] == "Tank":
 			their_name = message["Name"]
 			if their_name == my_name:
@@ -232,7 +239,7 @@ while True:
 		
 		#if not CHASING_SNITCH: GameServer.sendMessage(ServerMessageTypes.MOVEFORWARDDISTANCE, {"Amount": 2})
 
-		if message["Type"] == "Snitch":
+		if ROAMING and message["Type"] == "Snitch":
 			print("IT'S THE  SNITCH")
 			
 			print("CHASE THE SNITCH!!!")
@@ -240,30 +247,57 @@ while True:
 			GameServer.sendMessage(ServerMessageTypes.TURNTOHEADING, {"Amount": to_snitch})
 			GameServer.sendMessage(ServerMessageTypes.TURNTURRETTOHEADING, {"Amount": to_snitch})
 
-	if message["messageType"] == ServerMessageTypes.SNITCHPICKUP:
+	if messageType == ServerMessageTypes.KILL:
+		HAVE_KILL = True
+		GameServer.sendMessage(ServerMessageTypes.TOGGLEFORWARD)
+
+# REGION: HANDLE KILL
+	if HAVE_KILL:
+		if in_goal(my_x, my_y):
+			HAVE_KILL = False
+			ROAMING = True
+			# TODO : set to roaming, not just return to center
+			to_goal = getHeading(my_x, my_y, CENTER[0], CENTER[1])
+			GameServer.sendMessage(ServerMessageTypes.TURNTOHEADING, {"Amount": to_goal})
+		else:
+			to_goal = getHeading(my_x, my_y, BLUE_GOAL[0], BLUE_GOAL[1])
+			GameServer.sendMessage(ServerMessageTypes.TURNTOHEADING, {"Amount": to_goal})
+
+	
+# REGION: SNITCH ACQUIRED
+	if messageType == ServerMessageTypes.SNITCHPICKUP:
 			if message["Id"] == my_id:
 				HAVE_SNITCH = True
+
+	if HAVE_SNITCH and messageType == ServerMessageTypes.DESTROYED:
+		HAVE_SNITCH = False
+		ROAMING = True
 
 	if HAVE_SNITCH:
 		print("RUNNING WITH SNITCH")
 		to_goal = getHeading(my_x, my_y, BLUE_GOAL[0], BLUE_GOAL[1])
 		GameServer.sendMessage(ServerMessageTypes.TURNTOHEADING, {"Amount": to_goal})
-
+		if in_goal(my_x, my_y):
+			HAVE_SNITCH = False
+			ROAMING = True
+	
 
 
 	#track_enemy(message)
     
-	if i == 5:
-		if random.randint(0, 10) > 5:
+	if i == 5 or i == 10:
+		if random.randint(0, 10) > 5 or True:
 			logging.info("Firing")
 			GameServer.sendMessage(ServerMessageTypes.FIRE)
 	elif i == 10:
-		logging.info("Turning randomly")
-		GameServer.sendMessage(ServerMessageTypes.TURNTOHEADING, {'Amount': random.randint(0, 359)})
+		pass
+		#logging.info("Turning randomly")
+		#GameServer.sendMessage(ServerMessageTypes.TURNTOHEADING, {'Amount': random.randint(0, 359)})
 	elif i == 15:
-		logging.info("Moving randomly")
-		GameServer.sendMessage(ServerMessageTypes.MOVEFORWARDDISTANCE, {'Amount': random.randint(0, 10)})
-	#i = i + 1
+		pass
+		#logging.info("Moving randomly")
+		#GameServer.sendMessage(ServerMessageTypes.MOVEFORWARDDISTANCE, {'Amount': random.randint(0, 10)})
+	i = i + 1
 	if i > 20:
 		i = 0
 
