@@ -163,8 +163,12 @@ def getHeading(x1, y1, x2, y2):
 	heading = 360 - heading
 	return abs(heading)
 
+def calculate_distance(x1, y1, x2, y2):
+    X = abs(x1-x2)
+    Y = abs(y1-y2)
+    return math.sqrt(X**2 + Y**2)
 
-def get_current_state(name):
+def get_current_state(name): 
     while(True):
         message = GameServer.readMessage()
         if message["messageType"] != 18:
@@ -182,12 +186,27 @@ def goToPoint(x1,y1,x2,y2):
             GameServer.sendMessage(ServerMessageTypes.MOVEFORWARDDISTANCE, {"Amount": 20})
 
 def attack(x1, y1, x2, y2):
+    GameServer.sendMessage(ServerMessageTypes.STOPALL)
     heading = getHeading(x1,y1,x2,y2)
     for i in range(10):
         if i == 0:
+            GameServer.sendMessage(ServerMessageTypes.TURNTOHEADING, {"Amount": heading})
             GameServer.sendMessage(ServerMessageTypes.TURNTURRETTOHEADING, {"Amount": heading})
+            distance = calculate_distance(x1, y1, x2, y2) - 5
+            GameServer.sendMessage(ServerMessageTypes.MOVEFORWARDDISTANCE, {"Amount": distance})
         elif i == 5 or i == 10:
             GameServer.sendMessage(ServerMessageTypes.FIRE)
+            
+def findRandomLocation(currentX, currentY):
+	GameServer.sendMessage(ServerMessageTypes.STOPMOVE)
+	GameServer.sendMessage(ServerMessageTypes.TURNTOHEADING, {"Amount": random.randint(90,270)})
+	pointX, pointY =  random.randint(-50, 50), random.randint( -80, 80)
+	heading = getHeading(currentX,currentY, pointX, pointY)
+	for i in range(11):
+		if i == 5: 
+			GameServer.send(ServerMessageTypes.TURNTOHEADING,	{"Amount": heading} )
+		if i == 10:
+			GameServer.send(ServerMessageTypes.TOGGLEFORWARD, {"Amount": heading})
 
 # Parse command line args
 parser = argparse.ArgumentParser()
@@ -222,23 +241,30 @@ goToPoint(currentState['X'], currentState['Y'], 0, 0)
 
 i = 0
 while True:
-    message = GameServer.readMessage()
-    currentState = get_current_state(args.name)
-    while abs(currentState['X'] >= 50) or abs(currentState['Y']) >= 80:
-        GameServer.sendMessage(ServerMessageTypes.TURNTOHEADING, {"Amount": random.randint(90,270)})
-        GameServer.sendMessage(ServerMessageTypes.MOVEFORWARDDISTANCE, {"Amount", random.randint(20, 100)})
+	message = GameServer.readMessage()
+	currentState = get_current_state(args.name)
+	currentX = currentState['X']
+	currentY = currentState['Y']
     
-    if message["messageType"] == 18:
-        if message['Type'] == 'Tank' and message['Name'] != args.name:
-            GameServer.sendMessage(ServerMessageTypes.STOPALL)
-            attack(currentState['X'], currentState['Y'], message['X'], message['Y'])
-            GameServer.sendMessage(ServerMessageTypes.TOGGLEFORWARD)
-        elif message['Type'] == 'HealthPickup' and currentState['Health'] <= 2:
-            goToPoint(currentState['X'], currentState['Y'], message['X'], message['Y'])
-        elif message['Type'] == 'AmmoPickup' and currentState['Ammo'] <= 5:
-            goToPoint(currentState['X'], currentState['Y'], message['X'], message['Y'])
-    if i == 10:
-        GameServer.sendMessage(ServerMessageTypes.TOGGLEFORWARD)
-    i += 1
+	if abs(currentX >= 50) or abs(currentY) >= 80:
+		findRandomLocation(currentX, currentY)
+    
+	if message["messageType"] == 18:
+		if message['Type'] == 'Tank' and message['Name'] != args.name and message['Health'] > 0:
+			attack(currentX, currentY, message['X'], message['Y'])
+			GameServer.sendMessage(ServerMessageTypes.TOGGLEFORWARD)
+		elif message['Type'] == 'HealthPickup' and currentState['Health'] <= 2:
+			goToPoint(currentX, currentY, message['X'], message['Y'])
+		elif message['Type'] == 'AmmoPickup' and currentState['Ammo'] <= 5:
+			goToPoint(currentX, currentY, message['X'], message['Y'])
+            
+	if message["messageType"] == 24:
+		if calculate_distance(currentX, currentY, 0, 100) < calculate_distance(currentX, currentY, 0, 100):
+			goToPoint(currentState['X'], currentState['Y'], 0, 100)
+		else:
+			goToPoint(currentState['X'], currentState['Y'], 0, 100)
+		if i == 10:
+			GameServer.sendMessage(ServerMessageTypes.TOGGLEFORWARD)
+	i += 1
 	
 
