@@ -190,10 +190,16 @@ my_ammo = 1000 # nonsense default arguments
 my_health = 1000
 my_x = 100
 my_y = 100 
+my_id = 1000
 
 
 # Main loop - read game messages, ignore them and randomly perform actions
 i=0
+
+CHASING_SNITCH = False
+HAVE_SNITCH = False
+
+GameServer.sendMessage(ServerMessageTypes.TOGGLEFORWARD)
 
 while True:
 	message = GameServer.readMessage()
@@ -206,6 +212,7 @@ while True:
 				my_health = message["Health"]
 				my_x = message["X"]
 				my_y = message["Y"]
+				my_id = message["Id"]
 			elif my_team in their_name:
 				#ally
 				pass
@@ -213,17 +220,36 @@ while True:
 				track_enemy(message)
 				#pass
 
-			if their_name == "ManualTank":
+			if their_name == "ManualTankd" or False:
 				print("gottem")
 		
-				to_goal = getHeading(my_x, my_y, message["X"], message["Y"])
+				#to_goal = getHeading(my_x, my_y, message["X"], message["Y"])
+				to_goal = getHeading(my_x, my_y, BLUE_GOAL[0], BLUE_GOAL[1])
 				#GameServer.sendMessage(ServerMessageTypes.TURNTOHEADING, {"Amount": to_goal})
 				print(to_goal)
 				GameServer.sendMessage(ServerMessageTypes.TURNTURRETTOHEADING, {"Amount": to_goal})
-		#GameServer.sendMessage(ServerMessageTypes.MOVEFORWARDDISTANCE, {"Amount": 10})
+				GameServer.sendMessage(ServerMessageTypes.TURNTOHEADING, {"Amount": to_goal})
+		
+		#if not CHASING_SNITCH: GameServer.sendMessage(ServerMessageTypes.MOVEFORWARDDISTANCE, {"Amount": 2})
 
-	else:
-			print(message)
+		if message["Type"] == "Snitch":
+			print("IT'S THE  SNITCH")
+			
+			print("CHASE THE SNITCH!!!")
+			to_snitch = getHeading(my_x, my_y, message["X"], message["Y"])
+			GameServer.sendMessage(ServerMessageTypes.TURNTOHEADING, {"Amount": to_snitch})
+			GameServer.sendMessage(ServerMessageTypes.TURNTURRETTOHEADING, {"Amount": to_snitch})
+
+	if message["messageType"] == ServerMessageTypes.SNITCHPICKUP:
+			if message["Id"] == my_id:
+				HAVE_SNITCH = True
+
+	if HAVE_SNITCH:
+		print("RUNNING WITH SNITCH")
+		to_goal = getHeading(my_x, my_y, BLUE_GOAL[0], BLUE_GOAL[1])
+		GameServer.sendMessage(ServerMessageTypes.TURNTOHEADING, {"Amount": to_goal})
+
+
 
 	#track_enemy(message)
     
