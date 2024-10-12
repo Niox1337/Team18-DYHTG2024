@@ -178,12 +178,38 @@ GameServer = ServerComms(args.hostname, args.port)
 logging.info("Creating tank with name '{}'".format(args.name))
 GameServer.sendMessage(ServerMessageTypes.CREATETANK, {'Name': args.name})
 
+my_name = args.name
+my_team = args.name.split(":")[0]
+my_ammo = 1000 # nonsense default arguments
+my_health = 1000
+my_x = 100
+my_y = 100 
+
+
 # Main loop - read game messages, ignore them and randomly perform actions
 i=0
 while True:
 	message = GameServer.readMessage()
 
-	track_enemy(message)
+	if message["messageType"] == ServerMessageTypes.OBJECTUPDATE:
+		if message["Type"] == "Tank":
+			their_name = message["Name"]
+			if their_name == my_name:
+				my_ammo = message["Ammo"]
+				my_health = message["Health"]
+				my_x = message["X"]
+				my_y = message["Y"]
+			elif my_team in their_name:
+				#ally
+				pass
+			else:
+				track_enemy(message)
+				#pass
+
+	else:
+			print(message)
+
+	#track_enemy(message)
     
 	if i == 5:
 		if random.randint(0, 10) > 5:
