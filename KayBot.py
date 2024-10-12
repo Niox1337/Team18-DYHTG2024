@@ -7,8 +7,6 @@ import binascii
 import struct
 import argparse
 import random
-import math
-import numpy as np
 
 from MessageFilter import *
 from MathUtils import * 
@@ -163,57 +161,6 @@ class ServerComms(object):
 			binascii.hexlify(message)))
 		return self.ServerSocket.send(message)
 
-def getHeading(x1, y1, x2, y2):
-	heading = math.atan2(y2 - y1, x2 - x1)
-	heading = heading * (180.0 / math.pi)
-	heading = (heading + 360) % 360
-	heading = 360 - heading
-	return abs(heading)
-
-def calculate_distance(x1, y1, x2, y2):
-    X = abs(x1-x2)
-    Y = abs(y1-y2)
-    return math.sqrt(X**2 + Y**2)
-
-def get_current_state(name): 
-    while(True):
-        message = GameServer.readMessage()
-        if message["messageType"] != 18:
-            continue
-        if message["Name"] == name:
-            return message
-
-def goToPoint(x1,y1,x2,y2):
-    heading = getHeading(x1,y1,x2,y2)
-    logging.info(heading)
-    for i in range(20):
-        if i == 5:
-            GameServer.sendMessage(ServerMessageTypes.TURNTOHEADING,{"Amount": heading})
-        if i == 15:
-            GameServer.sendMessage(ServerMessageTypes.MOVEFORWARDDISTANCE, {"Amount": 20})
-
-def attack(x1, y1, x2, y2):
-    GameServer.sendMessage(ServerMessageTypes.STOPALL)
-    heading = getHeading(x1,y1,x2,y2)
-    for i in range(10):
-        if i == 0:
-            GameServer.sendMessage(ServerMessageTypes.TURNTOHEADING, {"Amount": heading})
-            GameServer.sendMessage(ServerMessageTypes.TURNTURRETTOHEADING, {"Amount": heading})
-            distance = calculate_distance(x1, y1, x2, y2) - 5
-            GameServer.sendMessage(ServerMessageTypes.MOVEFORWARDDISTANCE, {"Amount": distance})
-        elif i == 5 or i == 10:
-            GameServer.sendMessage(ServerMessageTypes.FIRE)
-            
-def findRandomLocation(currentX, currentY):
-	GameServer.sendMessage(ServerMessageTypes.STOPMOVE)
-	GameServer.sendMessage(ServerMessageTypes.TURNTOHEADING, {"Amount": random.randint(90,270)})
-	pointX, pointY =  random.randint(-50, 50), random.randint( -80, 80)
-	heading = getHeading(currentX,currentY, pointX, pointY)
-	for i in range(11):
-		if i == 5: 
-			GameServer.send(ServerMessageTypes.TURNTOHEADING,	{"Amount": heading} )
-		if i == 10:
-			GameServer.send(ServerMessageTypes.TOGGLEFORWARD, {"Amount": heading})
 
 # Parse command line args
 parser = argparse.ArgumentParser()
@@ -249,38 +196,74 @@ my_id = 1000
 # Main loop - read game messages, ignore them and randomly perform actions
 i=0
 
-message = GameServer.readMessage()
-GameServer.sendMessage(ServerMessageTypes.TOGGLETURRETRIGHT)
+CHASING_SNITCH = False
+HAVE_SNITCH = False
+
 GameServer.sendMessage(ServerMessageTypes.TOGGLEFORWARD)
 
-currentState = get_current_state(args.name)
-goToPoint(currentState['X'], currentState['Y'], 0, 0)
-
-i = 0
 while True:
 	message = GameServer.readMessage()
-	currentState = get_current_state(args.name)
-	currentX = currentState['X']
-	currentY = currentState['Y']
+
+	if message["messageType"] == ServerMessageTypes.OBJECTUPDATE:
+		if message["Type"] == "Tank":
+			their_name = message["Name"]
+			if their_name == my_name:
+				my_ammo = message["Ammo"]
+				my_health = message["Health"]
+				my_x = message["X"]
+				my_y = message["Y"]
+				my_id = message["Id"]
+			elif my_team in their_name:
+				#ally
+				pass
+			else:
+				track_enemy(message)
+				#pass
+
+			if their_name == "ManualTankd" or False:
+				print("gottem")
+		
+				#to_goal = getHeading(my_x, my_y, message["X"], message["Y"])
+				to_goal = getHeading(my_x, my_y, BLUE_GOAL[0], BLUE_GOAL[1])
+				#GameServer.sendMessage(ServerMessageTypes.TURNTOHEADING, {"Amount": to_goal})
+				print(to_goal)
+				GameServer.sendMessage(ServerMessageTypes.TURNTURRETTOHEADING, {"Amount": to_goal})
+				GameServer.sendMessage(ServerMessageTypes.TURNTOHEADING, {"Amount": to_goal})
+		
+		#if not CHASING_SNITCH: GameServer.sendMessage(ServerMessageTypes.MOVEFORWARDDISTANCE, {"Amount": 2})
+
+		if message["Type"] == "Snitch":
+			print("IT'S THE  SNITCH")
+			
+			print("CHASE THE SNITCH!!!")
+			to_snitch = getHeading(my_x, my_y, message["X"], message["Y"])
+			GameServer.sendMessage(ServerMessageTypes.TURNTOHEADING, {"Amount": to_snitch})
+			GameServer.sendMessage(ServerMessageTypes.TURNTURRETTOHEADING, {"Amount": to_snitch})
+
+	if message["messageType"] == ServerMessageTypes.SNITCHPICKUP:
+			if message["Id"] == my_id:
+				HAVE_SNITCH = True
+
+	if HAVE_SNITCH:
+		print("RUNNING WITH SNITCH")
+		to_goal = getHeading(my_x, my_y, BLUE_GOAL[0], BLUE_GOAL[1])
+		GameServer.sendMessage(ServerMessageTypes.TURNTOHEADING, {"Amount": to_goal})
+
+
+
+	#track_enemy(message)
     
-	if abs(currentX >= 50) or abs(currentY) >= 80:
-		findRandomLocation(currentX, currentY)
-    
-	if message["messageType"] == 18:
-		if message['Type'] == 'Tank' and message['Name'] != args.name and message['Health'] > 0:
-			attack(currentX, currentY, message['X'], message['Y'])
-			GameServer.sendMessage(ServerMessageTypes.TOGGLEFORWARD)
-		elif message['Type'] == 'HealthPickup' and currentState['Health'] <= 2:
-			goToPoint(currentX, currentY, message['X'], message['Y'])
-		elif message['Type'] == 'AmmoPickup' and currentState['Ammo'] <= 5:
-			goToPoint(currentX, currentY, message['X'], message['Y'])
-            
-	if message["messageType"] == 24:
-		if calculate_distance(currentX, currentY, 0, 100) < calculate_distance(currentX, currentY, 0, 100):
-			goToPoint(currentState['X'], currentState['Y'], 0, 100)
-		else:
-			goToPoint(currentState['X'], currentState['Y'], 0, 100)
-		if i == 10:
-			GameServer.sendMessage(ServerMessageTypes.TOGGLEFORWARD)
-	i += 1
+	if i == 5:
+		if random.randint(0, 10) > 5:
+			logging.info("Firing")
+			GameServer.sendMessage(ServerMessageTypes.FIRE)
+	elif i == 10:
+		logging.info("Turning randomly")
+		GameServer.sendMessage(ServerMessageTypes.TURNTOHEADING, {'Amount': random.randint(0, 359)})
+	elif i == 15:
+		logging.info("Moving randomly")
+		GameServer.sendMessage(ServerMessageTypes.MOVEFORWARDDISTANCE, {'Amount': random.randint(0, 10)})
+	#i = i + 1
+	if i > 20:
+		i = 0
 
