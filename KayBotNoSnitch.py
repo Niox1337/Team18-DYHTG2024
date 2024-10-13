@@ -368,15 +368,15 @@ while True:
 		
 		#if not CHASING_SNITCH: GameServer.sendMessage(ServerMessageTypes.MOVEFORWARDDISTANCE, {"Amount": 2})
 
-		if ROAMING and message["Type"] == "Snitch":
-			print("IT'S THE  SNITCH")
+		# if ROAMING and message["Type"] == "Snitch":
+		# 	print("IT'S THE  SNITCH")
 			
-			print("CHASE THE SNITCH!!!")
-			CHASING_SNITCH = True
-			TIME_SINCE_LAST_SNITCH = time()
-			to_snitch = getHeading(my_x, my_y, message["X"], message["Y"])
-			GameServer.sendMessage(ServerMessageTypes.TURNTOHEADING, {"Amount": to_snitch})
-			GameServer.sendMessage(ServerMessageTypes.TURNTURRETTOHEADING, {"Amount": to_snitch})
+		# 	print("CHASE THE SNITCH!!!")
+		# 	CHASING_SNITCH = True
+		# 	TIME_SINCE_LAST_SNITCH = time()
+		# 	to_snitch = getHeading(my_x, my_y, message["X"], message["Y"])
+		# 	GameServer.sendMessage(ServerMessageTypes.TURNTOHEADING, {"Amount": to_snitch})
+		# 	GameServer.sendMessage(ServerMessageTypes.TURNTURRETTOHEADING, {"Amount": to_snitch})
 
 	if messageType == ServerMessageTypes.KILL:
 		HAVE_KILL = True
