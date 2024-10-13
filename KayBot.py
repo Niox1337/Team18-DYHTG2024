@@ -216,6 +216,7 @@ TIME_SINCE_LAST_SNITCH = 1000
 TIME_SINCE_LAST_HEALTH = 1000
 TIME_SINCE_LAST_AMMO = 1000
 TIME_SINCE_LAST_RANDOM = 1000
+TIME_SINCE_LAST_ENEMY = 0
 
 def goToRandomPlace():
 	new_x = random.randint(-90, 90)
@@ -312,16 +313,15 @@ while True:
 				my_id = message["Id"]
 				my_heading = message["Heading"]
 				my_turret_heading = message["TurretHeading"]
-			elif my_team in their_name:
-				#ally
-				pass
-			else:
-				track_enemy(message)
-				#pass
+			# elif my_team in their_name:
+			# 	#ally
+			# 	pass
+			# else:
+			# 	track_enemy(message)
+			# 	#pass
 
 # # REGION: SEARCHING HEALTH (these need messages in, unlike have kill and have snitch which don't)
 		if SEARCHING_HEALTH:
-			GameServer.sendMessage(ServerMessageTypes.TURNTURRETTOHEADING, {"Amount": my_turret_heading + 70})
 			if my_health > 1:
 				SEARCHING_HEALTH = False 
 				ROAMING = True
@@ -331,13 +331,14 @@ while True:
 				GameServer.sendMessage(ServerMessageTypes.TURNTURRETTOHEADING, {"Amount": to_health})
 				TIME_SINCE_LAST_HEALTH = time()
 			else:
+				if time() - TIME_SINCE_LAST_HEALTH > 1:
+					GameServer.sendMessage(ServerMessageTypes.TURNTURRETTOHEADING, {"Amount": my_turret_heading + 70})
 				if time() - TIME_SINCE_LAST_HEALTH > 2:
 					goToRandomPlace()
 			continue
 
 # REGION: SEARCHING AMMO
 		if SEARCHING_AMMO:
-			GameServer.sendMessage(ServerMessageTypes.TURNTURRETTOHEADING, {"Amount": my_turret_heading + 70})
 			if my_ammo > 0:
 				SEARCHING_AMMO = False 
 				ROAMING = True
@@ -347,6 +348,8 @@ while True:
 				GameServer.sendMessage(ServerMessageTypes.TURNTURRETTOHEADING, {"Amount": to_ammo})
 				TIME_SINCE_LAST_AMMO = time()
 			else:
+				if time() - TIME_SINCE_LAST_AMMO > 1:
+					GameServer.sendMessage(ServerMessageTypes.TURNTURRETTOHEADING, {"Amount": my_turret_heading + 70})
 				if time() - TIME_SINCE_LAST_AMMO > 2:
 					goToRandomPlace()
 
@@ -381,11 +384,20 @@ while True:
 
 	if ROAMING and not CHASING_SNITCH:
 			print("ROAM")
-			if time() - TIME_SINCE_LAST_RANDOM > 4:
-				TIME_SINCE_LAST_RANDOM = time()
-				goToRandomPlace()
-			GameServer.sendMessage(ServerMessageTypes.TURNTURRETTOHEADING, {"Amount": my_turret_heading + 70})
-
+			if time() - TIME_SINCE_LAST_ENEMY > 2:
+				
+				if time() - TIME_SINCE_LAST_RANDOM > 4:
+					TIME_SINCE_LAST_RANDOM = time()
+					goToRandomPlace()
+				GameServer.sendMessage(ServerMessageTypes.TURNTURRETTOHEADING, {"Amount": my_turret_heading + 70})
+			else:
+				if messageType == ServerMessageTypes.OBJECTUPDATE:
+					if message["Type"] == "Tank":
+						their_name = message["Name"]
+						if not my_team in their_name:
+							enemy_loc = getHeading(my_x, my_y, message["X"], message["Y"])
+							ServerComms.sendMessage(ServerMessageTypes.TURNTOHEADING(enemy_loc), {"Amount": enemy_loc})
+							ServerComms.sendMessage(ServerMessageTypes.TURNTURRETTOHEADING(enemy_loc), {"Amount": enemy_loc})
 
 	
 
