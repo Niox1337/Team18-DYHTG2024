@@ -403,6 +403,7 @@ while True:
 						TIME_SINCE_LAST_RANDOM = time()
 						goToRandomPlace()
 			else:
+				GameServer.sendMessage(ServerMessageTypes.STOPMOVE)
 				if messageType == ServerMessageTypes.OBJECTUPDATE:
 					if message["Type"] == "Tank":
 						their_name = message["Name"]
@@ -414,19 +415,12 @@ while True:
 							predicted_loc = predict_new_position(enemy.last_positions())
 							aim_loc = getHeading(my_x, my_y, predicted_loc[0], predicted_loc[1])
 							GameServer.sendMessage(ServerMessageTypes.TURNTURRETTOHEADING, {"Amount": aim_loc})
-
-	
+							GameServer.sendMessage(ServerMessageTypes.TOGGLEFORWARD)
+							GameServer.sendMessage(ServerMessageTypes.FIRE)
 
 	
 
 
 	#track_enemy(message)
     
-	if i == 5 or i == 10 or True:
-		if random.randint(0, 10) > 5 or True:
-			logging.info("Firing")
-			GameServer.sendMessage(ServerMessageTypes.FIRE)
-	i = i + 1
-	if i > 20:
-		i = 0
 
