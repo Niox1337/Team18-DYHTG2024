@@ -224,6 +224,14 @@ def goToRandomPlace():
 	new_goal = getHeading(my_x, my_y, new_x, new_y)
 	GameServer.sendMessage(ServerMessageTypes.TURNTOHEADING, {"Amount": new_goal})
 
+def decideGoal(current_x, current_y):
+	blue_dis = math.sqrt((BLUE_GOAL[0] - current_x) ** 2 + (BLUE_GOAL[1] - current_y) ** 2)
+	red_dis = math.sqrt((RED_GOAL[0] - current_x) ** 2 + (RED_GOAL[1] - current_y) ** 2)
+	if blue_dis > red_dis:
+		return getHeading(current_x, current_y, RED_GOAL[0], RED_GOAL[1])
+	else:
+		return getHeading(current_x, current_y, BLUE_GOAL[0], BLUE_GOAL[1])
+
 
 while True:
 
@@ -268,7 +276,7 @@ while True:
 
 	if HAVE_SNITCH:
 		print("RUNNING WITH SNITCH")
-		to_goal = getHeading(my_x, my_y, BLUE_GOAL[0], BLUE_GOAL[1])
+		to_goal = decideGoal(my_x, my_y)
 		GameServer.sendMessage(ServerMessageTypes.TURNTOHEADING, {"Amount": to_goal})
 		if in_goal(my_x, my_y):
 			HAVE_SNITCH = False
@@ -291,7 +299,7 @@ while True:
 			to_goal = getHeading(my_x, my_y, CENTER[0], CENTER[1])
 			GameServer.sendMessage(ServerMessageTypes.TURNTOHEADING, {"Amount": to_goal})
 		else:
-			to_goal = getHeading(my_x, my_y, BLUE_GOAL[0], BLUE_GOAL[1])
+			to_goal = decideGoal(my_x, my_y)
 			GameServer.sendMessage(ServerMessageTypes.TURNTOHEADING, {"Amount": to_goal})
 		continue
 
