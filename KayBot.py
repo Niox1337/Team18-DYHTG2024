@@ -216,7 +216,7 @@ TIME_SINCE_LAST_SNITCH = 1000
 TIME_SINCE_LAST_HEALTH = 1000
 TIME_SINCE_LAST_AMMO = 1000
 TIME_SINCE_LAST_RANDOM = 1000
-TIME_SINCE_LAST_ENEMY = 0
+TIME_SINCE_LAST_ENEMY = 1000
 
 def goToRandomPlace():
 	new_x = random.randint(-90, 90)
@@ -383,21 +383,32 @@ while True:
 # REGION: ROAMING
 
 	if ROAMING and not CHASING_SNITCH:
-			print("ROAM")
-			if time() - TIME_SINCE_LAST_ENEMY > 2:
-				
-				if time() - TIME_SINCE_LAST_RANDOM > 4:
-					TIME_SINCE_LAST_RANDOM = time()
-					goToRandomPlace()
-				GameServer.sendMessage(ServerMessageTypes.TURNTURRETTOHEADING, {"Amount": my_turret_heading + 70})
+			enemy_found = False
+			if messageType == ServerMessageTypes.OBJECTUPDATE:
+					if message["Type"] == "Tank":
+						their_name = message["Name"]
+						if not my_team in their_name:
+							print("ENEMY FOUND")
+							TIME_SINCE_LAST_ENEMY = time()
+							enemy_found = True
+
+			if not enemy_found:
+				if time() - TIME_SINCE_LAST_ENEMY > 2:
+					GameServer.sendMessage(ServerMessageTypes.TURNTURRETTOHEADING, {"Amount": my_turret_heading + 70})
+					print("HUNTING ENEMY")
+					
+					if time() - TIME_SINCE_LAST_RANDOM > 4:
+						TIME_SINCE_LAST_RANDOM = time()
+						goToRandomPlace()
 			else:
 				if messageType == ServerMessageTypes.OBJECTUPDATE:
 					if message["Type"] == "Tank":
 						their_name = message["Name"]
 						if not my_team in their_name:
+							TIME_SINCE_LAST_ENEMY = time()
 							enemy_loc = getHeading(my_x, my_y, message["X"], message["Y"])
-							ServerComms.sendMessage(ServerMessageTypes.TURNTOHEADING(enemy_loc), {"Amount": enemy_loc})
-							ServerComms.sendMessage(ServerMessageTypes.TURNTURRETTOHEADING(enemy_loc), {"Amount": enemy_loc})
+							GameServer.sendMessage(ServerMessageTypes.TURNTOHEADING, {"Amount": enemy_loc})
+							GameServer.sendMessage(ServerMessageTypes.TURNTURRETTOHEADING, {"Amount": enemy_loc})
 
 	
 
