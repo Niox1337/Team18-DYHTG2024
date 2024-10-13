@@ -24,8 +24,17 @@ def predict_new_position(positions):
 
     diff_x = [x[i+1] - x[i] for i in range(0, len(x)-1)]
     diff_y = [y[i+1] - y[i] for i in range(0, len(y)-1)]
-    avg_x = sum(diff_x)/len(diff_x)
-    avg_y = sum(diff_y)/len(diff_y)
+    
+    try:
+        avg_x = sum(diff_x)/len(diff_x)
+    except ZeroDivisionError:
+        avg_x = 0
+
+    try:
+        avg_y = sum(diff_y)/len(diff_y)
+    except ZeroDivisionError:
+        avg_y = 0
+ 
     new_x = x[-1] + avg_x
     new_y = y[-1] + avg_y
 
