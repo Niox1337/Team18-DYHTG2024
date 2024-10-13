@@ -252,8 +252,6 @@ while True:
 			else:
 				track_enemy(message)
 				pass
-
-
 # REGION: SNITCH ACQUIRED
 	if messageType == ServerMessageTypes.SNITCHPICKUP:
 			if message["Id"] == my_id:
@@ -279,6 +277,11 @@ while True:
 			to_goal = getHeading(my_x, my_y, CENTER[0], CENTER[1])
 			GameServer.sendMessage(ServerMessageTypes.TURNTOHEADING, {"Amount": to_goal})
 		continue
+
+	if CHASING_SNITCH:
+		if time() - TIME_SINCE_LAST_SNITCH > 2:
+			CHASING_SNITCH = False
+			ROAMING = True
 
 # REGION: HANDLE KILL
 	if HAVE_KILL:
@@ -372,6 +375,7 @@ while True:
 			
 			print("CHASE THE SNITCH!!!")
 			CHASING_SNITCH = True
+			TIME_SINCE_LAST_SNITCH = time()
 			to_snitch = getHeading(my_x, my_y, message["X"], message["Y"])
 			GameServer.sendMessage(ServerMessageTypes.TURNTOHEADING, {"Amount": to_snitch})
 			GameServer.sendMessage(ServerMessageTypes.TURNTURRETTOHEADING, {"Amount": to_snitch})
