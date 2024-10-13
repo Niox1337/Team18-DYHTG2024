@@ -20,7 +20,7 @@ RED_PENALTY = (0, -75)
 CENTER = (0, 0)
 
 def in_goal(x, y):
-	return y > 100 or y < -100
+	return y > 100 or y < -100 or x > 100 or x < -100
 
 class ServerMessageTypes(object):
 	TEST = 0
@@ -232,6 +232,27 @@ while True:
 	message = GameServer.readMessage()
 	messageType = message["messageType"]
 
+	# this updates our stats so it NEEDS to be at the top
+	if messageType == ServerMessageTypes.OBJECTUPDATE:
+
+		if message["Type"] == "Tank":
+			their_name = message["Name"]
+			if their_name == my_name:
+				my_ammo = message["Ammo"]
+				my_health = message["Health"]
+				my_x = message["X"]
+				my_y = message["Y"]
+				my_id = message["Id"]
+				my_heading = message["Heading"]
+				my_turret_heading = message["TurretHeading"]
+			elif my_team in their_name:
+				#ally
+				pass
+			else:
+				#track_enemy(message)
+				pass
+
+
 # REGION: SNITCH ACQUIRED
 	if messageType == ServerMessageTypes.SNITCHPICKUP:
 			if message["Id"] == my_id:
@@ -254,6 +275,8 @@ while True:
 		if in_goal(my_x, my_y):
 			HAVE_SNITCH = False
 			ROAMING = True
+			to_goal = getHeading(my_x, my_y, CENTER[0], CENTER[1])
+			GameServer.sendMessage(ServerMessageTypes.TURNTOHEADING, {"Amount": to_goal})
 		continue
 
 # REGION: HANDLE KILL
@@ -298,6 +321,7 @@ while True:
 
 # # REGION: SEARCHING HEALTH (these need messages in, unlike have kill and have snitch which don't)
 		if SEARCHING_HEALTH:
+			GameServer.sendMessage(ServerMessageTypes.TURNTURRETTOHEADING, {"Amount": my_turret_heading + 70})
 			if my_health > 1:
 				SEARCHING_HEALTH = False 
 				ROAMING = True
@@ -313,6 +337,7 @@ while True:
 
 # REGION: SEARCHING AMMO
 		if SEARCHING_AMMO:
+			GameServer.sendMessage(ServerMessageTypes.TURNTURRETTOHEADING, {"Amount": my_turret_heading + 70})
 			if my_ammo > 0:
 				SEARCHING_AMMO = False 
 				ROAMING = True
