@@ -224,7 +224,6 @@ def goToRandomPlace():
 	new_goal = getHeading(my_x, my_y, new_x, new_y)
 	GameServer.sendMessage(ServerMessageTypes.TURNTOHEADING, {"Amount": new_goal})
 
-message = GameServer.readMessage()
 
 while True:
 
@@ -358,15 +357,6 @@ while True:
 
 			continue
 
-			if their_name == "ManualTankd" or False:
-				print("gottem")
-		
-				#to_goal = getHeading(my_x, my_y, message["X"], message["Y"])
-				to_goal = getHeading(my_x, my_y, BLUE_GOAL[0], BLUE_GOAL[1])
-				#GameServer.sendMessage(ServerMessageTypes.TURNTOHEADING, {"Amount": to_goal})
-				print(to_goal)
-				GameServer.sendMessage(ServerMessageTypes.TURNTURRETTOHEADING, {"Amount": to_goal})
-				GameServer.sendMessage(ServerMessageTypes.TURNTOHEADING, {"Amount": to_goal})
 		
 		#if not CHASING_SNITCH: GameServer.sendMessage(ServerMessageTypes.MOVEFORWARDDISTANCE, {"Amount": 2})
 
@@ -428,14 +418,6 @@ while True:
 		if random.randint(0, 10) > 5 or True:
 			logging.info("Firing")
 			GameServer.sendMessage(ServerMessageTypes.FIRE)
-	elif i == 10:
-		pass
-		#logging.info("Turning randomly")
-		#GameServer.sendMessage(ServerMessageTypes.TURNTOHEADING, {'Amount': random.randint(0, 359)})
-	elif i == 15:
-		pass
-		#logging.info("Moving randomly")
-		#GameServer.sendMessage(ServerMessageTypes.MOVEFORWARDDISTANCE, {'Amount': random.randint(0, 10)})
 	i = i + 1
 	if i > 20:
 		i = 0
