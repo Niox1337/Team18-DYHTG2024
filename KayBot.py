@@ -250,7 +250,7 @@ while True:
 				#ally
 				pass
 			else:
-				#track_enemy(message)
+				track_enemy(message)
 				pass
 
 
@@ -408,7 +408,10 @@ while True:
 							TIME_SINCE_LAST_ENEMY = time()
 							enemy_loc = getHeading(my_x, my_y, message["X"], message["Y"])
 							GameServer.sendMessage(ServerMessageTypes.TURNTOHEADING, {"Amount": enemy_loc})
-							GameServer.sendMessage(ServerMessageTypes.TURNTURRETTOHEADING, {"Amount": enemy_loc})
+							enemy = enemies[message["Id"]]
+							predicted_loc = predict_new_position(enemy.last_positions())
+							aim_loc = getHeading(my_x, my_y, predicted_loc[0], predicted_loc[1])
+							GameServer.sendMessage(ServerMessageTypes.TURNTURRETTOHEADING, {"Amount": aim_loc})
 
 	
 
